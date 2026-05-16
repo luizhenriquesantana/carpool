@@ -2,7 +2,7 @@
 description: 'Guidelines for building Spring Boot base applications'
 applyTo: '**/*.java, **/*.kt'
 version: '1'
-disclaimer: 'This file provides general best practices and may not fully represent Fidelity’s official requirements. Please consult with your team or BU to ensure compliance with all relevant policies and standards.'
+disclaimer: 'This file provides general best practices.'
 ---
 
 # Spring Boot Development
