@@ -1,0 +1,16 @@
+googleMaps:
+  apiKey: "${GOOGLE_MAPS_API_KEY:}"
+  geocodingBaseUrl: "https://maps.googleapis.com/maps/api/geocode/json"
+  geocodeCacheTtlSeconds: 86400
+  routesBaseUrl: "https://routes.googleapis.com/directions/v2:computeRoutes"
+  routesCacheTtlSeconds: 1800
+  fallbackKmh: 35.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      show-details: "never"

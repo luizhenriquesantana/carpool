@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "googleMaps.apiKey",
+      "type": "java.lang.String",
+      "description": "Google Maps API key used for Geocoding and Routes API calls."
+    },
+    {
+      "name": "googleMaps.geocodingBaseUrl",
+      "type": "java.lang.String",
+      "description": "Base URL for Google Geocoding API."
+    },
+    {
+      "name": "googleMaps.geocodeCacheTtlSeconds",
+      "type": "java.lang.Long",
+      "description": "TTL in seconds for geocoding cache entries."
+    },
+    {
+      "name": "googleMaps.routesBaseUrl",
+      "type": "java.lang.String",
+      "description": "Base URL for Google Routes API."
+    },
+    {
+      "name": "googleMaps.routesCacheTtlSeconds",
+      "type": "java.lang.Long",
+      "description": "TTL in seconds for routes cache entries."
+    },
+    {
+      "name": "googleMaps.fallbackKmh",
+      "type": "java.lang.Double",
+      "description": "Fallback speed in km/h used when route leg API lookup fails."
+    }
+  ]
+}
