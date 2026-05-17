@@ -247,7 +247,7 @@ public class RouteController {
         return new ApiStopDto(
                 stop.id(),
                 stop.label(),
-                stop.addressOrEircode(),
+                stop.addressOrPostalCode(),
                 stop.coordinates().latitude(),
                 stop.coordinates().longitude()
         );

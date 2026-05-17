@@ -3,7 +3,7 @@ package com.santana.carpool.api.dto;
 public record ApiStopDto(
         String id,
         String name,
-        String eircode,
+        String postalCode,
         double latitude,
         double longitude
 ) {
