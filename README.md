@@ -8,7 +8,7 @@ Carpool route planning project.
 
 ## REST API
 
-The API server entry point is `com.fmr.carpool.CarpoolApplication`.
+The API server entry point is `com.santana.carpool.CarpoolApplication`.
 
 Routing mode:
 - Pickup ordering uses Google Routes API driving travel cost (road-aware).
