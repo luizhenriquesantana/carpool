@@ -90,7 +90,7 @@ class DomainModelTest {
         assertThat(stop.id()).isEqualTo("p1");
         assertThat(stop.label()).isEqualTo("Dunnes Stores Athlone");
         assertThat(stop.type()).isEqualTo(StopType.PICKUP);
-        assertThat(stop.addressOrEircode()).isEqualTo("N37 A1B2");
+        assertThat(stop.addressOrPostalCode()).isEqualTo("N37 A1B2");
         assertThat(stop.coordinates()).isNotNull();
     }
 
@@ -151,7 +151,7 @@ class DomainModelTest {
         // Act & Assert
         assertThatThrownBy(() -> new Stop("p1", "Dunnes Stores Athlone", StopType.PICKUP, null, coordinates))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Address or Eircode is required");
+                .hasMessageContaining("Address or postal code is required");
     }
 
     @Test
@@ -161,7 +161,7 @@ class DomainModelTest {
         // Act & Assert
         assertThatThrownBy(() -> new Stop("p1", "Dunnes Stores Athlone", StopType.PICKUP, "  ", coordinates))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Address or Eircode is required");
+                .hasMessageContaining("Address or postal code is required");
     }
 
     @Test

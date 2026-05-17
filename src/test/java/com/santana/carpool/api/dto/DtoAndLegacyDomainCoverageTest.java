@@ -63,11 +63,11 @@ class DtoAndLegacyDomainCoverageTest {
 
         assertThatThrownBy(() -> new LocationInput("", "N37 A1B2"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Label cannot be blank");
+                .hasMessageContaining("Label is required.");
 
         assertThatThrownBy(() -> new LocationInput("Home", ""))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Address or Eircode cannot be blank");
+                .hasMessageContaining("Address or postal code cannot be blank");
     }
 
     @Test
