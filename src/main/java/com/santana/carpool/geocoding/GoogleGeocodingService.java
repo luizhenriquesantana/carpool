@@ -1,5 +1,6 @@
 package com.santana.carpool.geocoding;
 
+import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,8 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,10 +29,7 @@ public class GoogleGeocodingService {
     private final HttpClient httpClient;
     private final String apiKey;
     private final String geocodingBaseUrl;
-    private final long geocodeCacheTtlSeconds;
-    private final Map<String, CacheEntry<GeoPoint>> geocodeCache = new ConcurrentHashMap<>();
-    private final AtomicLong cacheHitCount = new AtomicLong(0);
-    private final AtomicLong cacheMissCount = new AtomicLong(0);
+    private final TtlCache<String, GeoPoint> geocodeCache;
 
     public GoogleGeocodingService(
             @Value("${googleMaps.apiKey:}") String apiKey,
@@ -45,7 +41,7 @@ public class GoogleGeocodingService {
         }
         this.apiKey = apiKey;
         this.geocodingBaseUrl = geocodingBaseUrl;
-        this.geocodeCacheTtlSeconds = geocodeCacheTtlSeconds;
+        this.geocodeCache = new TtlCache<>(geocodeCacheTtlSeconds);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -58,7 +54,7 @@ public class GoogleGeocodingService {
 
         // Normalize eircode so equivalent inputs map to the same cache entry.
         String cacheKey = normalizeEircode(eircode);
-        GeoPoint cached = getFromCache(cacheKey);
+        GeoPoint cached = geocodeCache.get(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -95,7 +91,7 @@ public class GoogleGeocodingService {
 
             GeoPoint resolved = extractLocation(body);
             // Persist resolved coordinates to avoid repeated external API calls.
-            putInCache(cacheKey, resolved);
+            geocodeCache.put(cacheKey, resolved);
             return resolved;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -116,7 +112,7 @@ public class GoogleGeocodingService {
         // Normalize country code and postal code for cache key
         String normalizedCountry = countryCode.toUpperCase(Locale.ROOT);
         String cacheKey = normalizePostalCode(postalCode) + "|" + normalizedCountry;
-        GeoPoint cached = getFromCache(cacheKey);
+        GeoPoint cached = geocodeCache.get(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -152,7 +148,7 @@ public class GoogleGeocodingService {
             }
 
             GeoPoint resolved = extractLocation(body);
-            putInCache(cacheKey, resolved);
+            geocodeCache.put(cacheKey, resolved);
             return resolved;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -197,36 +193,7 @@ public class GoogleGeocodingService {
         return postalCode.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", "");
     }
 
-    private GeoPoint getFromCache(String key) {
-        CacheEntry<GeoPoint> entry = geocodeCache.get(key);
-        if (entry == null) {
-            cacheMissCount.incrementAndGet();
-            return null;
-        }
-
-        if (entry.expiresAtEpochMillis < System.currentTimeMillis()) {
-            geocodeCache.remove(key);
-            cacheMissCount.incrementAndGet();
-            return null;
-        }
-
-        cacheHitCount.incrementAndGet();
-        return entry.value;
-    }
-
-    private void putInCache(String key, GeoPoint value) {
-        long expiresAt = System.currentTimeMillis() + (geocodeCacheTtlSeconds * 1000L);
-        geocodeCache.put(key, new CacheEntry<>(value, expiresAt));
-    }
-
-    private record CacheEntry<T>(T value, long expiresAtEpochMillis) {
-    }
-
     public Map<String, Long> cacheStats() {
-        return Map.of(
-                "hits", cacheHitCount.get(),
-                "misses", cacheMissCount.get(),
-                "size", (long) geocodeCache.size()
-        );
+        return geocodeCache.stats();
     }
 }
