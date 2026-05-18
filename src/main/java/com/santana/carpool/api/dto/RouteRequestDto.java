@@ -1,14 +1,18 @@
 package com.santana.carpool.api.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+
 import java.util.List;
 
 public record RouteRequestDto(
-        String country,
-        String driverName,
-        String driverPostalCode,
-        String officeName,
-        String officePostalCode,
+        @NotBlank(message = "country is required") String country,
+        @NotBlank(message = "driverName is required") String driverName,
+        @NotBlank(message = "driverPostalCode is required") String driverPostalCode,
+        @NotBlank(message = "officeName is required") String officeName,
+        @NotBlank(message = "officePostalCode is required") String officePostalCode,
         String tripType,
-        List<ColleagueRequest> colleagues
+        @NotEmpty(message = "At least one colleague is required") List<@Valid ColleagueRequest> colleagues
 ) {
 }

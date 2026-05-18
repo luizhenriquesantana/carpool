@@ -5,7 +5,9 @@ import com.santana.carpool.api.dto.RouteResponseDto;
 import com.santana.carpool.api.dto.WeeklyRouteRequestDto;
 import com.santana.carpool.api.dto.WeeklyRouteResponseDto;
 import com.santana.carpool.service.RouteService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -25,12 +29,12 @@ public class RouteController {
     }
 
     @PostMapping("/route")
-    public RouteResponseDto route(@RequestBody RouteRequestDto request) {
+    public RouteResponseDto route(@Valid @RequestBody RouteRequestDto request) {
         return routeService.planSingleRoute(request);
     }
 
     @PostMapping("/weekly-route")
-    public WeeklyRouteResponseDto weeklyRoute(@RequestBody WeeklyRouteRequestDto request) {
+    public WeeklyRouteResponseDto weeklyRoute(@Valid @RequestBody WeeklyRouteRequestDto request) {
         return routeService.planWeeklyRoute(request);
     }
 
@@ -44,5 +48,14 @@ public class RouteController {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Map<String, String> internal(IllegalStateException ex) {
         return Map.of("error", ex.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> validationError(MethodArgumentNotValidException ex) {
+        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .collect(Collectors.toList());
+        return Map.of("error", "Validation failed", "details", errors);
     }
 }
