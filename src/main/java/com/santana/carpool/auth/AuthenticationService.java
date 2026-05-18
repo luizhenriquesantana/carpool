@@ -34,10 +34,10 @@ public class AuthenticationService {
     public AuthResponse login(LoginRequest request) {
         String username = canonicalize(request.username());
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password."));
+                .orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
 
         if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
-            throw new IllegalArgumentException("Invalid username or password.");
+            throw new BadCredentialsException("Invalid username or password.");
         }
 
         return new AuthResponse(tokenProvider.generateToken(username));

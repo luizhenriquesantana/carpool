@@ -1,0 +1,13 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: carpool-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: carpool
+    volumes:
+      - carpool-mongo-data:/data/db
+
+volumes:
+  carpool-mongo-data:
