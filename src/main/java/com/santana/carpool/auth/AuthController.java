@@ -1,5 +1,6 @@
 package com.santana.carpool.auth;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,13 +22,15 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthenticationService.AuthResponse register(@RequestBody AuthenticationService.RegisterRequest request) {
-        return authenticationService.register(request);
+    public AuthenticationService.AuthResponse register(@RequestBody AuthenticationService.RegisterRequest request,
+                                                       HttpServletRequest httpRequest) {
+        return authenticationService.register(request, httpRequest);
     }
 
     @PostMapping("/login")
-    public AuthenticationService.AuthResponse login(@RequestBody AuthenticationService.LoginRequest request) {
-        return authenticationService.login(request);
+    public AuthenticationService.AuthResponse login(@RequestBody AuthenticationService.LoginRequest request,
+                                                     HttpServletRequest httpRequest) {
+        return authenticationService.login(request, httpRequest);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

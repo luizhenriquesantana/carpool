@@ -24,7 +24,10 @@ mvn clean package
 ### Run
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="--googleMaps.apiKey=YOUR_GOOGLE_MAPS_API_KEY --server.port=8080"
+export GOOGLE_MAPS_API_KEY=your_google_maps_key
+export MONGODB_URI="mongodb://localhost:27017/carpool"
+export JWT_SECRET="a-very-long-secret-value"
+mvn spring-boot:run
 ```
 
 ### Endpoints
@@ -40,7 +43,17 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--googleMaps.apiKey=YOUR_GOOGLE
 
 ## Authentication
 
-This application supports local JWT login and OAuth2 login via provider configuration.
+This application uses JWT-based authentication with username/password registration and login. All authenticated endpoints require a valid JWT token in the `Authorization: Bearer <token>` header.
+
+**Public endpoints:**
+- `/api/route` - route planning
+- `/api/weekly-route` - weekly route planning
+- `/api/auth/register` - create new user
+- `/api/auth/login` - login existing user
+- `/actuator/health` - health check
+
+**Protected endpoints:**
+- `/api/user/**` - user-specific saved postal codes
 
 ### Register a local user
 
@@ -152,12 +165,75 @@ Notes:
 
 ## Configuration
 
-Use `MONGODB_URI` to point the app at MongoDB Atlas or a local MongoDB instance.
+### Required environment variables
 
-Example environment variables:
+- `GOOGLE_MAPS_API_KEY` - Google Maps API key for geocoding and routing
+- `MONGODB_URI` - MongoDB connection string (defaults to `mongodb://localhost:27017/carpool`)
+- `JWT_SECRET` - Secret key for JWT token signing (minimum 32 characters)
+
+### MongoDB setup
+
+The application requires MongoDB for user authentication and saved postal codes. The `/actuator/health` endpoint will check MongoDB connectivity and report DOWN if the database is unreachable.
+
+**Local MongoDB:**
+```bash
+# Start MongoDB locally on default port
+docker run -d -p 27017:27017 mongo:latest
+```
+
+**MongoDB Atlas:**
+```bash
+export MONGODB_URI="mongodb+srv://user:password@cluster0.mongodb.net/carpool?retryWrites=true&w=majority"
+```
+
+### Full example
 
 ```bash
 export GOOGLE_MAPS_API_KEY=your_google_maps_key
-export MONGODB_URI="mongodb+srv://user:password@cluster0.mongodb.net/carpool?retryWrites=true&w=majority"
-export JWT_SECRET="a-very-long-secret-value"
+export MONGODB_URI="mongodb://localhost:27017/carpool"
+export JWT_SECRET="a-very-long-secret-value-at-least-32-chars"
+mvn spring-boot:run
 ```
+
+## Fly.io Deployment
+
+The application can be deployed to Fly.io using Docker. The project includes a multi-stage Dockerfile that builds the JAR during the Docker build process.
+
+### Prerequisites
+
+- Install Fly.io CLI: `brew install flyctl` (macOS)
+- Authenticate: `flyctl auth signup` and `flyctl auth login`
+
+### Deployment steps
+
+1. **Initialize the Fly.io app:**
+   ```bash
+   flyctl launch
+   ```
+   - Select or create an organization
+   - Choose a region (e.g., London `lhr`)
+   - Skip database setup (MongoDB Atlas is already configured)
+   - Set the app name (e.g., `carpool-route-planning`)
+
+2. **Set environment variables:**
+   ```bash
+   flyctl secrets set GOOGLE_MAPS_API_KEY=your_google_maps_key
+   flyctl secrets set MONGODB_URI="mongodb+srv://user:password@cluster0.mongodb.net/carpool?retryWrites=true&w=majority"
+   flyctl secrets set JWT_SECRET="a-very-long-secret-value-at-least-32-chars"
+   ```
+
+3. **Deploy:**
+   ```bash
+   flyctl deploy
+   ```
+
+The application will be built using the multi-stage Dockerfile (Maven build + JAR copy) and deployed to Fly.io. The app is configured to:
+- Listen on `0.0.0.0:8080` for Fly.io proxy routing
+- Run health checks on `/actuator/health`
+- Keep at least 1 machine running at all times
+
+### Access the deployed app
+
+- API: `https://your-app-name.fly.dev`
+- Swagger UI: `https://your-app-name.fly.dev/swagger-ui.html`
+- Health check: `https://your-app-name.fly.dev/actuator/health`
