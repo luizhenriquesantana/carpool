@@ -1,5 +1,7 @@
 package com.santana.carpool.geocoding;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,16 +17,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class GoogleGeocodingService {
-    private static final Pattern STATUS_PATTERN = Pattern.compile("\"status\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile("\"error_message\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern LOCATION_PATTERN = Pattern.compile(
-            "\"location\"\\s*:\\s*\\{\\s*\"lat\"\\s*:\\s*([-0-9.]+)\\s*,\\s*\"lng\"\\s*:\\s*([-0-9.]+)\\s*\\}"
-    );
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
     private final String apiKey;
@@ -78,9 +74,10 @@ public class GoogleGeocodingService {
             }
 
             String body = response.body();
-            String status = extractStatus(body);
+            JsonNode root = MAPPER.readTree(body);
+            String status = extractStatus(root);
             if (!"OK".equals(status)) {
-                String errorMessage = extractErrorMessage(body);
+                String errorMessage = extractErrorMessage(root);
                 if (errorMessage == null) {
                     throw new IllegalStateException("Geocoding API returned status " + status + " for eircode " + eircode);
                 }
@@ -89,7 +86,7 @@ public class GoogleGeocodingService {
                 );
             }
 
-            GeoPoint resolved = extractLocation(body);
+            GeoPoint resolved = extractLocation(root);
             // Persist resolved coordinates to avoid repeated external API calls.
             geocodeCache.put(cacheKey, resolved);
             return resolved;
@@ -136,9 +133,10 @@ public class GoogleGeocodingService {
             }
 
             String body = response.body();
-            String status = extractStatus(body);
+            JsonNode root = MAPPER.readTree(body);
+            String status = extractStatus(root);
             if (!"OK".equals(status)) {
-                String errorMessage = extractErrorMessage(body);
+                String errorMessage = extractErrorMessage(root);
                 if (errorMessage == null) {
                     throw new IllegalStateException("Geocoding API returned status " + status + " for postal code " + postalCode + " in " + normalizedCountry);
                 }
@@ -147,7 +145,7 @@ public class GoogleGeocodingService {
                 );
             }
 
-            GeoPoint resolved = extractLocation(body);
+            GeoPoint resolved = extractLocation(root);
             geocodeCache.put(cacheKey, resolved);
             return resolved;
         } catch (InterruptedException ex) {
@@ -158,31 +156,30 @@ public class GoogleGeocodingService {
         }
     }
 
-    private String extractStatus(String jsonBody) {
-        Matcher matcher = STATUS_PATTERN.matcher(jsonBody);
-        if (!matcher.find()) {
+    private String extractStatus(JsonNode root) {
+        JsonNode statusNode = root.path("status");
+        if (statusNode.isMissingNode() || !statusNode.isTextual()) {
             throw new IllegalStateException("Could not parse geocoding status from response.");
         }
-        return matcher.group(1);
+        return statusNode.asText();
     }
 
-    private GeoPoint extractLocation(String jsonBody) {
-        Matcher matcher = LOCATION_PATTERN.matcher(jsonBody);
-        if (!matcher.find()) {
+    private GeoPoint extractLocation(JsonNode root) {
+        JsonNode location = root.path("results").path(0).path("geometry").path("location");
+        JsonNode latNode = location.path("lat");
+        JsonNode lngNode = location.path("lng");
+        if (latNode.isMissingNode() || lngNode.isMissingNode()) {
             throw new IllegalStateException("Could not parse geocoding coordinates from response.");
         }
-
-        double lat = Double.parseDouble(matcher.group(1));
-        double lng = Double.parseDouble(matcher.group(2));
-        return new GeoPoint(lat, lng);
+        return new GeoPoint(latNode.asDouble(), lngNode.asDouble());
     }
 
-    private String extractErrorMessage(String jsonBody) {
-        Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(jsonBody);
-        if (!matcher.find()) {
+    private String extractErrorMessage(JsonNode root) {
+        JsonNode errorNode = root.path("error_message");
+        if (errorNode.isMissingNode() || !errorNode.isTextual()) {
             return null;
         }
-        return matcher.group(1);
+        return errorNode.asText();
     }
 
     private String normalizeEircode(String eircode) {

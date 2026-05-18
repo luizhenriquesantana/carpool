@@ -1,5 +1,7 @@
 package com.santana.carpool.routing;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,14 +15,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class GoogleRoutesService {
-    private static final Pattern DISTANCE_PATTERN = Pattern.compile("\\\"distanceMeters\\\"\\s*:\\s*(\\d+)");
-    private static final Pattern DURATION_PATTERN = Pattern.compile("\\\"duration\\\"\\s*:\\s*\\\"(\\d+)s\\\"");
-    private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile("\\\"error_message\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
     private final String apiKey;
@@ -70,8 +68,9 @@ public class GoogleRoutesService {
             }
 
             String body = response.body();
-            long distanceMeters = extractDistanceMeters(body);
-            long durationSeconds = extractDurationSeconds(body);
+            JsonNode root = MAPPER.readTree(body);
+            long distanceMeters = extractDistanceMeters(root);
+            long durationSeconds = extractDurationSeconds(root);
             RouteLegMetrics metrics = new RouteLegMetrics(distanceMeters / 1000.0, durationSeconds);
             // Save successful response for subsequent route-planning requests.
             routesCache.put(cacheKey, metrics);
@@ -99,36 +98,37 @@ public class GoogleRoutesService {
                 destination.longitude());
     }
 
-    private long extractDistanceMeters(String body) {
-        Matcher matcher = DISTANCE_PATTERN.matcher(body);
-        if (!matcher.find()) {
-            String error = extractErrorMessage(body);
+    private long extractDistanceMeters(JsonNode root) {
+        JsonNode distanceNode = root.path("routes").path(0).path("distanceMeters");
+        if (distanceNode.isMissingNode() || !distanceNode.isNumber()) {
+            String error = extractErrorMessage(root);
             if (error == null) {
                 throw new IllegalStateException("Could not parse routes distance from response.");
             }
             throw new IllegalStateException("Routes API error: " + error);
         }
-        return Long.parseLong(matcher.group(1));
+        return distanceNode.asLong();
     }
 
-    private long extractDurationSeconds(String body) {
-        Matcher matcher = DURATION_PATTERN.matcher(body);
-        if (!matcher.find()) {
-            String error = extractErrorMessage(body);
+    private long extractDurationSeconds(JsonNode root) {
+        JsonNode durationNode = root.path("routes").path(0).path("duration");
+        if (durationNode.isMissingNode() || !durationNode.isTextual()) {
+            String error = extractErrorMessage(root);
             if (error == null) {
                 throw new IllegalStateException("Could not parse routes duration from response.");
             }
             throw new IllegalStateException("Routes API error: " + error);
         }
-        return Long.parseLong(matcher.group(1));
+        String durationStr = durationNode.asText();
+        return Long.parseLong(durationStr.replace("s", ""));
     }
 
-    private String extractErrorMessage(String body) {
-        Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(body);
-        if (!matcher.find()) {
+    private String extractErrorMessage(JsonNode root) {
+        JsonNode errorNode = root.path("error_message");
+        if (errorNode.isMissingNode() || !errorNode.isTextual()) {
             return null;
         }
-        return matcher.group(1);
+        return errorNode.asText();
     }
 
     private String buildCacheKey(GeoPoint origin, GeoPoint destination) {
