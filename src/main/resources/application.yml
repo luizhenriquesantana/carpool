@@ -1,6 +1,7 @@
 spring:
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/carpool}
+    database: ${MONGODB_DATABASE:carpool}
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}
