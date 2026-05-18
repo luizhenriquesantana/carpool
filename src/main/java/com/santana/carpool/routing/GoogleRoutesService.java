@@ -1,5 +1,6 @@
 package com.santana.carpool.routing;
 
+import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,8 +13,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,10 +25,7 @@ public class GoogleRoutesService {
     private final HttpClient httpClient;
     private final String apiKey;
     private final String routesBaseUrl;
-    private final long routesCacheTtlSeconds;
-    private final Map<String, CacheEntry<RouteLegMetrics>> routesCache = new ConcurrentHashMap<>();
-    private final AtomicLong cacheHitCount = new AtomicLong(0);
-    private final AtomicLong cacheMissCount = new AtomicLong(0);
+    private final TtlCache<String, RouteLegMetrics> routesCache;
 
     public GoogleRoutesService(
             @Value("${googleMaps.apiKey:}") String apiKey,
@@ -42,7 +38,7 @@ public class GoogleRoutesService {
 
         this.apiKey = apiKey;
         this.routesBaseUrl = routesBaseUrl;
-        this.routesCacheTtlSeconds = routesCacheTtlSeconds;
+        this.routesCache = new TtlCache<>(routesCacheTtlSeconds);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -51,7 +47,7 @@ public class GoogleRoutesService {
     public RouteLegMetrics computeDrivingLeg(GeoPoint origin, GeoPoint destination) {
         // Route metrics are cached per origin/destination pair to cut API latency and cost.
         String cacheKey = buildCacheKey(origin, destination);
-        RouteLegMetrics cached = getFromCache(cacheKey);
+        RouteLegMetrics cached = routesCache.get(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -78,7 +74,7 @@ public class GoogleRoutesService {
             long durationSeconds = extractDurationSeconds(body);
             RouteLegMetrics metrics = new RouteLegMetrics(distanceMeters / 1000.0, durationSeconds);
             // Save successful response for subsequent route-planning requests.
-            putInCache(cacheKey, metrics);
+            routesCache.put(cacheKey, metrics);
             return metrics;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -146,36 +142,7 @@ public class GoogleRoutesService {
         );
     }
 
-    private RouteLegMetrics getFromCache(String key) {
-        CacheEntry<RouteLegMetrics> entry = routesCache.get(key);
-        if (entry == null) {
-            cacheMissCount.incrementAndGet();
-            return null;
-        }
-
-        if (entry.expiresAtEpochMillis < System.currentTimeMillis()) {
-            routesCache.remove(key);
-            cacheMissCount.incrementAndGet();
-            return null;
-        }
-
-        cacheHitCount.incrementAndGet();
-        return entry.value;
-    }
-
-    private void putInCache(String key, RouteLegMetrics value) {
-        long expiresAt = System.currentTimeMillis() + (routesCacheTtlSeconds * 1000L);
-        routesCache.put(key, new CacheEntry<>(value, expiresAt));
-    }
-
-    private record CacheEntry<T>(T value, long expiresAtEpochMillis) {
-    }
-
     public Map<String, Long> cacheStats() {
-        return Map.of(
-                "hits", cacheHitCount.get(),
-                "misses", cacheMissCount.get(),
-                "size", (long) routesCache.size()
-        );
+        return routesCache.stats();
     }
 }
