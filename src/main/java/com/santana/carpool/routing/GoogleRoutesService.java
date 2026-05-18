@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,7 @@ import java.util.Map;
 
 @Service
 public class GoogleRoutesService {
+    private static final Logger log = LoggerFactory.getLogger(GoogleRoutesService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
@@ -40,6 +43,7 @@ public class GoogleRoutesService {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+        log.info("GoogleRoutesService initialized (cacheTtl={}s)", routesCacheTtlSeconds);
     }
 
     public RouteLegMetrics computeDrivingLeg(GeoPoint origin, GeoPoint destination) {
@@ -47,8 +51,10 @@ public class GoogleRoutesService {
         String cacheKey = buildCacheKey(origin, destination);
         RouteLegMetrics cached = routesCache.get(cacheKey);
         if (cached != null) {
+            log.debug("Routes cache hit for {}", cacheKey);
             return cached;
         }
+        log.debug("Routes cache miss for {}, calling API", cacheKey);
 
         String requestBody = buildRequestBody(origin, destination);
 
@@ -72,13 +78,15 @@ public class GoogleRoutesService {
             long distanceMeters = extractDistanceMeters(root);
             long durationSeconds = extractDurationSeconds(root);
             RouteLegMetrics metrics = new RouteLegMetrics(distanceMeters / 1000.0, durationSeconds);
-            // Save successful response for subsequent route-planning requests.
             routesCache.put(cacheKey, metrics);
+            log.debug("Routes API returned {}km, {}s for {}", metrics.distanceKm(), durationSeconds, cacheKey);
             return metrics;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Routes request interrupted for {}", cacheKey, ex);
             throw new IllegalStateException("Routes request interrupted.", ex);
         } catch (IOException ex) {
+            log.error("Routes request I/O failure for {}", cacheKey, ex);
             throw new IllegalStateException("Routes request failed.", ex);
         }
     }

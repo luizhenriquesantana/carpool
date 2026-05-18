@@ -2,6 +2,8 @@ package com.santana.carpool.routing;
 
 import com.santana.carpool.api.dto.TripType;
 import com.santana.carpool.domain.Stop;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.util.Map;
 
 @Service
 public class RoutePlanningService {
+    private static final Logger log = LoggerFactory.getLogger(RoutePlanningService.class);
     private final GoogleRoutesService routesService;
     private final NearestNeighborRoutePlanner routePlanner;
 
@@ -24,14 +27,14 @@ public class RoutePlanningService {
     }
 
     public PlannedRoute planRoute(TripType tripType, Stop driver, Stop office, List<Stop> pickups) {
-        // Evening routes reverse the direction so ordering is optimized from office back home.
+        log.info("Planning {} route with {} pickups", tripType, pickups.size());
         Stop routeStart = tripType == TripType.EVENING_TO_HOME ? office : driver;
         Stop routeEnd = tripType == TripType.EVENING_TO_HOME ? driver : office;
 
-        // Per-request cache avoids recomputing the same leg many times during exhaustive permutations.
         Map<String, RouteLegMetrics> legCache = new HashMap<>();
         List<Stop> ordered = optimizePickupOrderRoadAware(routeStart, pickups, routeEnd, legCache);
         RouteTotals totals = calculateTotalsRoadAware(routeStart, ordered, routeEnd, legCache);
+        log.info("Route planned: {}km, {}s total", totals.distanceKm(), totals.durationSeconds());
         return new PlannedRoute(ordered, totals.distanceKm(), totals.durationSeconds());
     }
 
@@ -46,8 +49,10 @@ public class RoutePlanningService {
         // Greedy fallback for >8 pickups kept for future extensibility (larger vehicle fleet,
         // charter services, corporate shuttles), but rarely triggered in practice.
         if (pickups.size() <= 8) {
+            log.debug("Using exhaustive search for {} pickups", pickups.size());
             return optimizeByExhaustiveSearch(driverStart, pickups, office, legCache);
         }
+        log.debug("Using greedy fallback for {} pickups (>8)", pickups.size());
         return planPickupOrderGreedyRoadAware(driverStart, pickups, legCache);
     }
 
@@ -186,9 +191,9 @@ public class RoutePlanningService {
         try {
             value = routesService.computeDrivingLeg(from.coordinates(), to.coordinates());
         } catch (RuntimeException ex) {
-            // Fallback keeps planning available if Routes API fails for a leg.
             double distanceKm = routePlanner.haversineKm(from.coordinates(), to.coordinates());
             long durationSeconds = Math.max(1L, Math.round((distanceKm / fallbackKmh) * 3600.0));
+            log.warn("Routes API failed for {} -> {}, using Haversine fallback ({}km)", from.id(), to.id(), distanceKm, ex);
             value = new RouteLegMetrics(distanceKm, durationSeconds);
         }
 

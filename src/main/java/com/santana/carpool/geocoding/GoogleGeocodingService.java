@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.santana.carpool.cache.TtlCache;
 import com.santana.carpool.domain.GeoPoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ import java.util.Map;
 
 @Service
 public class GoogleGeocodingService {
+    private static final Logger log = LoggerFactory.getLogger(GoogleGeocodingService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
@@ -41,6 +44,7 @@ public class GoogleGeocodingService {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+        log.info("GoogleGeocodingService initialized (cacheTtl={}s)", geocodeCacheTtlSeconds);
     }
 
     public GeoPoint geocodeEircode(String eircode) {
@@ -52,8 +56,10 @@ public class GoogleGeocodingService {
         String cacheKey = normalizeEircode(eircode);
         GeoPoint cached = geocodeCache.get(cacheKey);
         if (cached != null) {
+            log.debug("Geocode cache hit for eircode={}", cacheKey);
             return cached;
         }
+        log.debug("Geocode cache miss for eircode={}, calling API", cacheKey);
 
         String encodedAddress = URLEncoder.encode(eircode, StandardCharsets.UTF_8);
         String requestUrl = geocodingBaseUrl
@@ -87,13 +93,15 @@ public class GoogleGeocodingService {
             }
 
             GeoPoint resolved = extractLocation(root);
-            // Persist resolved coordinates to avoid repeated external API calls.
             geocodeCache.put(cacheKey, resolved);
+            log.debug("Geocoded eircode={} -> ({}, {})", cacheKey, resolved.latitude(), resolved.longitude());
             return resolved;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Geocoding interrupted for eircode={}", eircode, ex);
             throw new IllegalStateException("Failed to geocode eircode " + eircode, ex);
         } catch (IOException ex) {
+            log.error("Geocoding I/O failure for eircode={}", eircode, ex);
             throw new IllegalStateException("Failed to geocode eircode " + eircode, ex);
         }
     }
@@ -111,8 +119,10 @@ public class GoogleGeocodingService {
         String cacheKey = normalizePostalCode(postalCode) + "|" + normalizedCountry;
         GeoPoint cached = geocodeCache.get(cacheKey);
         if (cached != null) {
+            log.debug("Geocode cache hit for postalCode={}", cacheKey);
             return cached;
         }
+        log.debug("Geocode cache miss for postalCode={}, calling API", cacheKey);
 
         String encodedAddress = URLEncoder.encode(postalCode, StandardCharsets.UTF_8);
         String requestUrl = geocodingBaseUrl
@@ -147,11 +157,14 @@ public class GoogleGeocodingService {
 
             GeoPoint resolved = extractLocation(root);
             geocodeCache.put(cacheKey, resolved);
+            log.debug("Geocoded postalCode={} -> ({}, {})", cacheKey, resolved.latitude(), resolved.longitude());
             return resolved;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Geocoding interrupted for postalCode={} in {}", postalCode, normalizedCountry, ex);
             throw new IllegalStateException("Failed to geocode postal code " + postalCode + " in " + normalizedCountry, ex);
         } catch (IOException ex) {
+            log.error("Geocoding I/O failure for postalCode={} in {}", postalCode, normalizedCountry, ex);
             throw new IllegalStateException("Failed to geocode postal code " + postalCode + " in " + normalizedCountry, ex);
         }
     }
