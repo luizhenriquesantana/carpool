@@ -5,6 +5,11 @@ import com.santana.carpool.api.dto.RouteResponseDto;
 import com.santana.carpool.api.dto.WeeklyRouteRequestDto;
 import com.santana.carpool.api.dto.WeeklyRouteResponseDto;
 import com.santana.carpool.service.RouteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +26,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Routes", description = "Carpool route optimization endpoints")
 public class RouteController {
     private final RouteService routeService;
 
@@ -28,11 +34,31 @@ public class RouteController {
         this.routeService = routeService;
     }
 
+    @Operation(
+            summary = "Plan a single carpool route",
+            description = "Geocodes all postal codes, optimizes pickup order using exhaustive search (<=8 pickups) or greedy fallback, and returns the optimal route with distance and duration.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Route planned successfully",
+                            content = @Content(schema = @Schema(implementation = RouteResponseDto.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid request (missing fields, invalid trip type)"),
+                    @ApiResponse(responseCode = "500", description = "Internal error (geocoding/routing API failure)")
+            }
+    )
     @PostMapping("/route")
     public RouteResponseDto route(@Valid @RequestBody RouteRequestDto request) {
         return routeService.planSingleRoute(request);
     }
 
+    @Operation(
+            summary = "Plan weekly carpool routes",
+            description = "Plans routes for each day of the week with fair driver rotation. Defaults to Monday-Friday if no days are specified.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Weekly routes planned successfully",
+                            content = @Content(schema = @Schema(implementation = WeeklyRouteResponseDto.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid request (missing fields, no eligible drivers)"),
+                    @ApiResponse(responseCode = "500", description = "Internal error (geocoding/routing API failure)")
+            }
+    )
     @PostMapping("/weekly-route")
     public WeeklyRouteResponseDto weeklyRoute(@Valid @RequestBody WeeklyRouteRequestDto request) {
         return routeService.planWeeklyRoute(request);
