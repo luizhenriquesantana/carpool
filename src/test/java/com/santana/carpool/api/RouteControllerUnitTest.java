@@ -14,6 +14,7 @@ import com.santana.carpool.domain.StopType;
 import com.santana.carpool.geocoding.GoogleGeocodingService;
 import com.santana.carpool.routing.GoogleRoutesService;
 import com.santana.carpool.routing.RoutePlanningService;
+import com.santana.carpool.service.RouteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,11 +48,13 @@ class RouteControllerUnitTest {
     @Mock
     private GoogleRoutesService routesService;
 
+    private RouteService routeService;
     private RouteController controller;
 
     @BeforeEach
     void setUp() {
-                controller = new RouteController(geocodingService, routePlanningService, routesService);
+                routeService = new RouteService(geocodingService, routePlanningService, routesService);
+                controller = new RouteController(routeService);
     }
 
     @Test
