@@ -15,9 +15,11 @@ import java.util.Map;
 @Component
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository userRepository;
+    private final JwtTokenProvider tokenProvider;
 
-    public OAuth2AuthenticationSuccessHandler(UserRepository userRepository) {
+    public OAuth2AuthenticationSuccessHandler(UserRepository userRepository, JwtTokenProvider tokenProvider) {
         this.userRepository = userRepository;
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
@@ -31,53 +33,60 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String providerId = extractProviderId(attributes, provider);
         String username = extractUsername(attributes, provider);
 
-        userRepository.findByProviderAndProviderId(provider, providerId)
-                .ifPresentOrElse(
-                        user -> {
-                            // Update last login
-                            User updatedUser = new User(
-                                    user.id(),
-                                    user.username(),
-                                    user.passwordHash(),
-                                    user.provider(),
-                                    user.providerId(),
-                                    user.userRegion(),
-                                    user.createDate(),
-                                    LocalDateTime.now(),
-                                    LocalDateTime.now()
-                            );
-                            userRepository.save(updatedUser);
-                        },
-                        () -> {
-                            // Create new user
-                            User newUser = new User(
-                                    null,
-                                    username,
-                                    null,
-                                    provider,
-                                    providerId,
-                                    null,
-                                    LocalDateTime.now(),
-                                    LocalDateTime.now(),
-                                    LocalDateTime.now()
-                            );
-                            userRepository.save(newUser);
-                        }
-                );
+        User user = userRepository.findByProviderAndProviderId(provider, providerId)
+                .map(existingUser -> {
+                    // Update last login
+                    User updatedUser = new User(
+                            existingUser.id(),
+                            existingUser.username(),
+                            existingUser.passwordHash(),
+                            existingUser.provider(),
+                            existingUser.providerId(),
+                            existingUser.userRegion(),
+                            existingUser.createDate(),
+                            LocalDateTime.now(),
+                            LocalDateTime.now()
+                    );
+                    return userRepository.save(updatedUser);
+                })
+                .orElseGet(() -> {
+                    // Create new user
+                    User newUser = new User(
+                            null,
+                            username,
+                            null,
+                            provider,
+                            providerId,
+                            null,
+                            LocalDateTime.now(),
+                            LocalDateTime.now(),
+                            LocalDateTime.now()
+                    );
+                    return userRepository.save(newUser);
+                });
 
-        // Redirect to frontend or return success
-        response.sendRedirect("/");
+        // Generate JWT token for the user
+        String token = tokenProvider.generateToken(user.username());
+
+        // Redirect to frontend oauth-callback with token
+        response.sendRedirect("http://localhost:4200/oauth-callback?token=" + token);
     }
 
     private String determineProvider(Authentication authentication) {
-        // Determine provider from the authentication object
-        // This will be set by Spring Security OAuth2
-        String registrationId = authentication.getAuthorities().stream()
-                .filter(auth -> auth.getAuthority().startsWith("OAUTH2_USER_"))
-                .map(auth -> auth.getAuthority().substring("OAUTH2_USER_".length()))
-                .findFirst()
-                .orElse("unknown");
-        return registrationId.toLowerCase();
+        // Extract provider from the OAuth2AuthorizedClient or from request
+        // For simplicity, we'll check if it's a Google or GitHub OAuth2User
+        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+        Map<String, Object> attributes = oauth2User.getAttributes();
+        
+        // Google uses "sub" as the unique identifier
+        // GitHub uses "id" as the unique identifier
+        if (attributes.containsKey("sub")) {
+            return "google";
+        } else if (attributes.containsKey("id") && attributes.containsKey("login")) {
+            return "github";
+        }
+        
+        return "unknown";
     }
 
     private String extractProviderId(Map<String, Object> attributes, String provider) {
