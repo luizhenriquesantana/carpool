@@ -4,7 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 @Document(collection = "users")
 public record User(
@@ -16,9 +16,9 @@ public record User(
         String provider,
         String providerId,
         String userRegion,
-        ZonedDateTime createDate,
-        ZonedDateTime updateDate,
-        ZonedDateTime lastLogin
+        LocalDateTime createDate,
+        LocalDateTime updateDate,
+        LocalDateTime lastLogin
 ) {
     public User {
         if (username == null || username.isBlank()) {

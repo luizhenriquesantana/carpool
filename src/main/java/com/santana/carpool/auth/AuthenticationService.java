@@ -5,8 +5,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.Locale;
 import java.util.Map;
 
@@ -35,7 +35,7 @@ public class AuthenticationService {
         }
 
         String passwordHash = passwordEncoder.encode(request.password());
-        ZonedDateTime now = ZonedDateTime.now(LHR_ZONE);
+        LocalDateTime now = LocalDateTime.now(LHR_ZONE);
         String region = extractRegionFromRequest(httpRequest);
         User user = new User(null, username, passwordHash, "local", null, region, now, now, null);
         userRepository.save(user);
@@ -51,7 +51,7 @@ public class AuthenticationService {
             throw new BadCredentialsException("Invalid username or password.");
         }
 
-        ZonedDateTime now = ZonedDateTime.now(LHR_ZONE);
+        LocalDateTime now = LocalDateTime.now(LHR_ZONE);
         String region = extractRegionFromRequest(httpRequest);
         User updatedUser = new User(user.id(), user.username(), user.passwordHash(), user.provider(),
                 user.providerId(), region != null ? region : user.userRegion(), user.createDate(), now, now);
