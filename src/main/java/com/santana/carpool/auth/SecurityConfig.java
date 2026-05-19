@@ -22,13 +22,16 @@ import java.util.Arrays;
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oauth2FailureHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           OAuth2AuthenticationSuccessHandler oauth2SuccessHandler,
+                          OAuth2AuthenticationFailureHandler oauth2FailureHandler,
                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.oauth2SuccessHandler = oauth2SuccessHandler;
+        this.oauth2FailureHandler = oauth2FailureHandler;
         this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
@@ -51,6 +54,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oauth2SuccessHandler)
+                        .failureHandler(oauth2FailureHandler)
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
