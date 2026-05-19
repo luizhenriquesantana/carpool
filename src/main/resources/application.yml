@@ -26,6 +26,7 @@ server:
   servlet:
     session:
       timeout: 15m
+  forward-headers-strategy: framework
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}
