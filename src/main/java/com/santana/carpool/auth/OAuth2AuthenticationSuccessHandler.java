@@ -3,6 +3,8 @@ package com.santana.carpool.auth;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -15,6 +17,8 @@ import java.util.Map;
 
 @Component
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
+    
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
     
@@ -30,50 +34,66 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     public void onAuthenticationSuccess(HttpServletRequest request,
                                        HttpServletResponse response,
                                        Authentication authentication) throws IOException, ServletException {
-        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-        Map<String, Object> attributes = oauth2User.getAttributes();
+        try {
+            OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+            Map<String, Object> attributes = oauth2User.getAttributes();
 
-        String provider = determineProvider(authentication);
-        String providerId = extractProviderId(attributes, provider);
-        String username = extractUsername(attributes, provider);
+            logger.info("OAuth2 authentication success. Attributes keys: {}", attributes.keySet());
 
-        User user = userRepository.findByProviderAndProviderId(provider, providerId)
-                .map(existingUser -> {
-                    // Update last login
-                    User updatedUser = new User(
-                            existingUser.id(),
-                            existingUser.username(),
-                            existingUser.passwordHash(),
-                            existingUser.provider(),
-                            existingUser.providerId(),
-                            existingUser.userRegion(),
-                            existingUser.createDate(),
-                            LocalDateTime.now(),
-                            LocalDateTime.now()
-                    );
-                    return userRepository.save(updatedUser);
-                })
-                .orElseGet(() -> {
-                    // Create new user
-                    User newUser = new User(
-                            null,
-                            username,
-                            null,
-                            provider,
-                            providerId,
-                            null,
-                            LocalDateTime.now(),
-                            LocalDateTime.now(),
-                            LocalDateTime.now()
-                    );
-                    return userRepository.save(newUser);
-                });
+            String provider = determineProvider(authentication);
+            logger.info("Determined provider: {}", provider);
 
-        // Generate JWT token for the user
-        String token = tokenProvider.generateToken(user.username());
+            String providerId = extractProviderId(attributes, provider);
+            String username = extractUsername(attributes, provider);
 
-        // Redirect to frontend oauth-callback with token
-        response.sendRedirect(frontendRedirectUrl + "?token=" + token);
+            logger.info("Creating/updating user: provider={}, providerId={}, username={}", provider, providerId, username);
+
+            User user = userRepository.findByProviderAndProviderId(provider, providerId)
+                    .map(existingUser -> {
+                        // Update last login
+                        User updatedUser = new User(
+                                existingUser.id(),
+                                existingUser.username(),
+                                existingUser.passwordHash(),
+                                existingUser.provider(),
+                                existingUser.providerId(),
+                                existingUser.userRegion(),
+                                existingUser.createDate(),
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                        );
+                        return userRepository.save(updatedUser);
+                    })
+                    .orElseGet(() -> {
+                        // Create new user
+                        User newUser = new User(
+                                null,
+                                username,
+                                null,
+                                provider,
+                                providerId,
+                                null,
+                                LocalDateTime.now(),
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                        );
+                        return userRepository.save(newUser);
+                    });
+
+            logger.info("User created/updated successfully: {}", user.username());
+
+            // Generate JWT token for the user
+            String token = tokenProvider.generateToken(user.username());
+            logger.info("JWT token generated successfully");
+
+            // Redirect to frontend oauth-callback with token
+            String redirectUrl = frontendRedirectUrl + "?token=" + token;
+            logger.info("Redirecting to: {}", redirectUrl);
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            logger.error("Error during OAuth2 authentication success handling", e);
+            throw e;
+        }
     }
 
     private String determineProvider(Authentication authentication) {
