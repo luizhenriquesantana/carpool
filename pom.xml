@@ -127,6 +127,24 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>io.sentry</groupId>
+                <artifactId>sentry-maven-plugin</artifactId>
+                <version>4.13.0</version>
+                <configuration>
+                    <org>luiz-henrique-santana</org>
+                    <projectName>carpool-route-planning</projectName>
+                    <authToken>${SENTRY_AUTH_TOKEN}</authToken>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>uploadSourceBundle</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
