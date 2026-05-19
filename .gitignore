@@ -31,3 +31,4 @@ hs_err_pid*
 replay_pid*
 docs/secrets/mondodb.txt
 docs/secrets/sentry.txt
+docs/secrets/google-analytics.txt
