@@ -31,6 +31,9 @@ jwt:
   secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}
   expiration-ms: 86400000
 
+frontend:
+  redirect-url: ${FRONTEND_REDIRECT_URL:http://localhost:4200/oauth-callback}
+
 googleMaps:
   apiKey: "${GOOGLE_MAPS_API_KEY:}"
   geocodingBaseUrl: "https://maps.googleapis.com/maps/api/geocode/json"

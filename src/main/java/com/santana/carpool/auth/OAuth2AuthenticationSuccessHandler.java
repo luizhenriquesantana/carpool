@@ -3,6 +3,7 @@ package com.santana.carpool.auth;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -16,6 +17,9 @@ import java.util.Map;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
+    
+    @Value("${frontend.redirect-url}")
+    private String frontendRedirectUrl;
 
     public OAuth2AuthenticationSuccessHandler(UserRepository userRepository, JwtTokenProvider tokenProvider) {
         this.userRepository = userRepository;
@@ -69,7 +73,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String token = tokenProvider.generateToken(user.username());
 
         // Redirect to frontend oauth-callback with token
-        response.sendRedirect("http://localhost:4200/oauth-callback?token=" + token);
+        response.sendRedirect(frontendRedirectUrl + "?token=" + token);
     }
 
     private String determineProvider(Authentication authentication) {
