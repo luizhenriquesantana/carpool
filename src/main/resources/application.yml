@@ -4,10 +4,28 @@ spring:
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/carpool}
     database: ${MONGODB_DATABASE:carpool}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: profile, email
+          github:
+            client-id: ${GITHUB_CLIENT_ID:}
+            client-secret: ${GITHUB_CLIENT_SECRET:}
+            scope: user:email
+        provider:
+          github:
+            user-name-attribute: login
 
 server:
   address: 0.0.0.0
   port: 8080
+  servlet:
+    session:
+      timeout: 15m
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}

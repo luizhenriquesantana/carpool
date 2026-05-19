@@ -32,3 +32,9 @@ replay_pid*
 docs/secrets/mondodb.txt
 docs/secrets/sentry.txt
 docs/secrets/google-analytics.txt
+docs/client_secret_434618609303-r0b0mo8bc3aic9fh0p490j1aui7bqt0r.apps.googleusercontent.com.json
+docs/Github Login API.txt
+docs/Google Login API.txt
+.gitignore
+README.md
+docs/social_secrets.txt

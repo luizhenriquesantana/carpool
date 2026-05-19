@@ -43,13 +43,15 @@ mvn spring-boot:run
 
 ## Authentication
 
-This application uses JWT-based authentication with username/password registration and login. All authenticated endpoints require a valid JWT token in the `Authorization: Bearer <token>` header.
+This application supports both JWT-based authentication with username/password and OAuth2 social login (Google and GitHub). Sessions expire after 15 minutes.
 
 **Public endpoints:**
 - `/api/route` - route planning
 - `/api/weekly-route` - weekly route planning
-- `/api/auth/register` - create new user
-- `/api/auth/login` - login existing user
+- `/api/auth/register` - create new local user
+- `/api/auth/login` - login local user
+- `/oauth2/authorization/google` - initiate Google OAuth2 login
+- `/oauth2/authorization/github` - initiate GitHub OAuth2 login
 - `/actuator/health` - health check
 
 **Protected endpoints:**
@@ -90,6 +92,30 @@ Response:
 ```bash
 curl http://localhost:8080/api/user/saved-postal-codes \
   -H "Authorization: Bearer eyJhbGciOi..."
+```
+
+### OAuth2 Social Login
+
+The application supports OAuth2 login with Google and GitHub. Users are automatically created or updated upon successful OAuth2 authentication.
+
+**Google OAuth2 Setup:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create OAuth2 client ID for Web application
+3. Add authorized redirect URI: `http://localhost:8080/login/oauth2/code/google` (local) or `https://your-app.fly.dev/login/oauth2/code/google` (production)
+4. Set environment variables: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+
+**GitHub OAuth2 Setup:**
+1. Go to GitHub → Settings → Developer settings → OAuth Apps
+2. Create new OAuth App with callback URL: `http://localhost:8080/login/oauth2/code/github` (local) or `https://your-app.fly.dev/login/oauth2/code/github` (production)
+3. Set environment variables: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+
+**Initiate OAuth2 Login:**
+```bash
+# Google
+curl http://localhost:8080/oauth2/authorization/google
+
+# GitHub
+curl http://localhost:8080/oauth2/authorization/github
 ```
 
 ### Save a postal code for the authenticated user
@@ -170,6 +196,10 @@ Notes:
 - `GOOGLE_MAPS_API_KEY` - Google Maps API key for geocoding and routing
 - `MONGODB_URI` - MongoDB connection string (defaults to `mongodb://localhost:27017/carpool`)
 - `JWT_SECRET` - Secret key for JWT token signing (minimum 32 characters)
+- `GOOGLE_CLIENT_ID` - Google OAuth2 client ID (for social login)
+- `GOOGLE_CLIENT_SECRET` - Google OAuth2 client secret (for social login)
+- `GITHUB_CLIENT_ID` - GitHub OAuth2 client ID (for social login)
+- `GITHUB_CLIENT_SECRET` - GitHub OAuth2 client secret (for social login)
 
 ### MongoDB setup
 
@@ -220,6 +250,10 @@ The application can be deployed to Fly.io using Docker. The project includes a m
    flyctl secrets set GOOGLE_MAPS_API_KEY=your_google_maps_key
    flyctl secrets set MONGODB_URI="mongodb+srv://user:password@cluster0.mongodb.net/carpool?retryWrites=true&w=majority"
    flyctl secrets set JWT_SECRET="a-very-long-secret-value-at-least-32-chars"
+   flyctl secrets set GOOGLE_CLIENT_ID=your_google_oauth2_client_id
+   flyctl secrets set GOOGLE_CLIENT_SECRET=your_google_oauth2_client_secret
+   flyctl secrets set GITHUB_CLIENT_ID=your_github_oauth2_client_id
+   flyctl secrets set GITHUB_CLIENT_SECRET=your_github_oauth2_client_secret
    ```
 
 3. **Deploy:**
