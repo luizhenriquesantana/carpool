@@ -25,7 +25,7 @@ server:
   port: 8080
   servlet:
     session:
-      timeout: 15m
+      timeout: 30m
   forward-headers-strategy: framework
 
 jwt:

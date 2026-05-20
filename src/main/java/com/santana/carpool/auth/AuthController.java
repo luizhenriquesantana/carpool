@@ -2,6 +2,7 @@ package com.santana.carpool.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +32,13 @@ public class AuthController {
     public AuthenticationService.AuthResponse login(@RequestBody AuthenticationService.LoginRequest request,
                                                      HttpServletRequest httpRequest) {
         return authenticationService.login(request, httpRequest);
+    }
+
+    @PostMapping("/logout")
+    public Map<String, String> logout(HttpServletRequest request) {
+        SecurityContextHolder.clearContext();
+        request.getSession().invalidate();
+        return Map.of("message", "Logged out successfully");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
