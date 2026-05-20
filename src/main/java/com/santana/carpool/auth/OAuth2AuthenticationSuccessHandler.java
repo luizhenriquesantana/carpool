@@ -44,16 +44,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             logger.info("Determined provider: {}", provider);
 
             String providerId = extractProviderId(attributes, provider);
-            String username = extractUsername(attributes, provider);
+            String username = extractUsername(attributes, provider).toLowerCase();
 
             logger.info("Creating/updating user: provider={}, providerId={}, username={}", provider, providerId, username);
 
             User user = userRepository.findByProviderAndProviderId(provider, providerId)
                     .map(existingUser -> {
-                        // Update last login
+                        // Update last login and ensure username is lowercase
                         User updatedUser = new User(
                                 existingUser.id(),
-                                existingUser.username(),
+                                username,
                                 existingUser.passwordHash(),
                                 existingUser.provider(),
                                 existingUser.providerId(),
