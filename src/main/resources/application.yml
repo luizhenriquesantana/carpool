@@ -30,7 +30,7 @@ server:
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}
-  expiration-ms: 86400000
+  expiration-ms: 900000
 
 frontend:
   redirect-url: ${FRONTEND_REDIRECT_URL:http://localhost:4200/oauth-callback}
