@@ -48,12 +48,15 @@ class RouteControllerUnitTest {
     @Mock
     private GoogleRoutesService routesService;
 
+    @Mock
+    private com.santana.carpool.auth.SavedPostalCodeService savedPostalCodeService;
+
     private RouteService routeService;
     private RouteController controller;
 
     @BeforeEach
     void setUp() {
-                routeService = new RouteService(geocodingService, routePlanningService, routesService);
+                routeService = new RouteService(geocodingService, routePlanningService, routesService, savedPostalCodeService);
                 controller = new RouteController(routeService);
     }
 
@@ -80,7 +83,7 @@ class RouteControllerUnitTest {
                 List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"), new ColleagueRequest("B&Q Athlone", "N37 E5F6"))
         );
 
-        RouteResponseDto response = controller.route(request);
+        RouteResponseDto response = controller.route(request, null);
 
         assertThat(response.tripType()).isEqualTo("MORNING_TO_OFFICE");
         assertThat(response.pickupOrder()).hasSize(2);
@@ -112,7 +115,7 @@ class RouteControllerUnitTest {
                 List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
         );
 
-        RouteResponseDto response = controller.route(request);
+        RouteResponseDto response = controller.route(request, null);
 
         assertThat(response.tripType()).isEqualTo("EVENING_TO_HOME");
         assertThat(response.pickupOrder()).isEmpty();
@@ -133,7 +136,7 @@ class RouteControllerUnitTest {
                 List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
         );
 
-        assertThatThrownBy(() -> controller.route(request))
+        assertThatThrownBy(() -> controller.route(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid tripType");
     }
@@ -161,7 +164,7 @@ class RouteControllerUnitTest {
                 null
         );
 
-        WeeklyRouteResponseDto response = controller.weeklyRoute(request);
+        WeeklyRouteResponseDto response = controller.weeklyRoute(request, null);
 
         assertThat(response.days()).hasSize(5);
         assertThat(response.driverAssignments()).containsEntry("Dunnes Stores Athlone", 5);
@@ -193,7 +196,7 @@ class RouteControllerUnitTest {
                 )
         );
 
-        WeeklyRouteResponseDto response = controller.weeklyRoute(request);
+        WeeklyRouteResponseDto response = controller.weeklyRoute(request, null);
 
         assertThat(response.days()).hasSize(2);
         assertThat(response.driverAssignments()).containsEntry("SuperValu Golden Island", 2);
@@ -204,7 +207,7 @@ class RouteControllerUnitTest {
     void testWeeklyRouteNoMembers() {
         WeeklyRouteRequestDto request = new WeeklyRouteRequestDto("IE", "Office", "N37 XR90", List.of(), List.of());
 
-        assertThatThrownBy(() -> controller.weeklyRoute(request))
+        assertThatThrownBy(() -> controller.weeklyRoute(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("At least one member is required");
     }
@@ -222,7 +225,7 @@ class RouteControllerUnitTest {
                 List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
         );
 
-        assertThatThrownBy(() -> controller.route(request))
+        assertThatThrownBy(() -> controller.route(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Missing required field: driverName");
     }
@@ -240,7 +243,7 @@ class RouteControllerUnitTest {
                 List.of()
         );
 
-        assertThatThrownBy(() -> controller.route(request))
+        assertThatThrownBy(() -> controller.route(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("At least one colleague is required");
     }
@@ -266,7 +269,7 @@ class RouteControllerUnitTest {
                 List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
         );
 
-        RouteResponseDto response = controller.route(request);
+        RouteResponseDto response = controller.route(request, null);
         assertThat(response.tripType()).isEqualTo("MORNING_TO_OFFICE");
     }
 
@@ -286,7 +289,7 @@ class RouteControllerUnitTest {
                 List.of(new DayRequest("Monday", null, "MORNING_TO_OFFICE"))
         );
 
-        assertThatThrownBy(() -> controller.weeklyRoute(request))
+        assertThatThrownBy(() -> controller.weeklyRoute(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("No eligible drivers found");
     }
@@ -307,7 +310,7 @@ class RouteControllerUnitTest {
                 List.of(new DayRequest("Monday", "NonExisting", "MORNING_TO_OFFICE"))
         );
 
-        assertThatThrownBy(() -> controller.weeklyRoute(request))
+        assertThatThrownBy(() -> controller.weeklyRoute(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Fixed driver not found or not eligible");
     }

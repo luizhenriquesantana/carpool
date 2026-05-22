@@ -5,6 +5,7 @@ import com.santana.carpool.api.dto.RouteResponseDto;
 import com.santana.carpool.api.dto.WeeklyRouteRequestDto;
 import com.santana.carpool.api.dto.WeeklyRouteResponseDto;
 import com.santana.carpool.service.RouteService;
+import org.springframework.security.core.Authentication;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -48,9 +49,9 @@ public class RouteController {
             }
     )
     @PostMapping("/route")
-    public RouteResponseDto route(@Valid @RequestBody RouteRequestDto request) {
+    public RouteResponseDto route(@Valid @RequestBody RouteRequestDto request, Authentication authentication) {
         log.info("POST /api/route - driver={}, colleagues={}", request.driverName(), request.colleagues() != null ? request.colleagues().size() : 0);
-        return routeService.planSingleRoute(request);
+        return routeService.planSingleRoute(request, authentication != null ? authentication.getName() : null);
     }
 
     @Operation(
@@ -64,9 +65,9 @@ public class RouteController {
             }
     )
     @PostMapping("/weekly-route")
-    public WeeklyRouteResponseDto weeklyRoute(@Valid @RequestBody WeeklyRouteRequestDto request) {
+    public WeeklyRouteResponseDto weeklyRoute(@Valid @RequestBody WeeklyRouteRequestDto request, Authentication authentication) {
         log.info("POST /api/weekly-route - members={}, days={}", request.members() != null ? request.members().size() : 0, request.days() != null ? request.days().size() : "default");
-        return routeService.planWeeklyRoute(request);
+        return routeService.planWeeklyRoute(request, authentication != null ? authentication.getName() : null);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

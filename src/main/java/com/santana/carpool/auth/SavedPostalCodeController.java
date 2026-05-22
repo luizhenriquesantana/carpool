@@ -50,10 +50,12 @@ public class SavedPostalCodeController {
                 savedPostalCode.id(),
                 savedPostalCode.label(),
                 savedPostalCode.postalCode(),
-                savedPostalCode.country()
+                savedPostalCode.country(),
+                savedPostalCode.createdAt() != null ? savedPostalCode.createdAt().toString() : null,
+                savedPostalCode.lastUsedAt() != null ? savedPostalCode.lastUsedAt().toString() : null
         );
     }
 
-    public record SavedPostalCodeView(String id, String label, String postalCode, String country) {
+    public record SavedPostalCodeView(String id, String label, String postalCode, String country, String createdAt, String lastUsedAt) {
     }
 }

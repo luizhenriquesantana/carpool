@@ -114,7 +114,6 @@ public class GoogleGeocodingService {
             throw new IllegalArgumentException("Country code is required.");
         }
 
-        // Normalize country code and postal code for cache key
         String normalizedCountry = countryCode.toUpperCase(Locale.ROOT);
         String cacheKey = normalizePostalCode(postalCode) + "|" + normalizedCountry;
         GeoPoint cached = geocodeCache.get(cacheKey);

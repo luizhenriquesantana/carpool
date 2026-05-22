@@ -3,6 +3,8 @@ package com.santana.carpool.auth;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
+
 @Document(collection = "savedPostalCodes")
 public record SavedPostalCode(
         @Id
@@ -10,7 +12,9 @@ public record SavedPostalCode(
         String userId,
         String label,
         String postalCode,
-        String country
+        String country,
+        Instant createdAt,
+        Instant lastUsedAt
 ) {
     public SavedPostalCode {
         if (userId == null || userId.isBlank()) {

@@ -9,6 +9,7 @@ import com.santana.carpool.api.dto.RouteResponseDto;
 import com.santana.carpool.api.dto.TripType;
 import com.santana.carpool.api.dto.WeeklyRouteRequestDto;
 import com.santana.carpool.api.dto.WeeklyRouteResponseDto;
+import com.santana.carpool.auth.SavedPostalCodeService;
 import com.santana.carpool.domain.Stop;
 import com.santana.carpool.domain.StopType;
 import com.santana.carpool.geocoding.GoogleGeocodingService;
@@ -28,24 +29,31 @@ public class RouteService {
     private final GoogleGeocodingService geocodingService;
     private final RoutePlanningService routePlanningService;
     private final GoogleRoutesService routesService;
+    private final SavedPostalCodeService savedPostalCodeService;
 
     public RouteService(
             GoogleGeocodingService geocodingService,
             RoutePlanningService routePlanningService,
-            GoogleRoutesService routesService
+            GoogleRoutesService routesService,
+            SavedPostalCodeService savedPostalCodeService
     ) {
         this.geocodingService = geocodingService;
         this.routePlanningService = routePlanningService;
         this.routesService = routesService;
+        this.savedPostalCodeService = savedPostalCodeService;
     }
 
-    public RouteResponseDto planSingleRoute(RouteRequestDto request) {
+    public RouteResponseDto planSingleRoute(RouteRequestDto request, String userEmail) {
         SingleRouteContext context = validateAndResolveSingleRoute(request);
+        touchPostalCodes(userEmail, List.of(request.driverPostalCode(), request.officePostalCode()),
+                request.colleagues().stream().map(ColleagueRequest::postalCode).toList());
         return buildSingleRouteResponse(context);
     }
 
-    public WeeklyRouteResponseDto planWeeklyRoute(WeeklyRouteRequestDto request) {
+    public WeeklyRouteResponseDto planWeeklyRoute(WeeklyRouteRequestDto request, String userEmail) {
         WeeklyRouteContext context = validateAndResolveWeeklyRoute(request);
+        touchPostalCodes(userEmail, List.of(request.officePostalCode()),
+                request.members().stream().map(com.santana.carpool.api.dto.MemberRequest::postalCode).toList());
         List<DailyRoutePlanDto> plannedDays = buildWeeklyPlans(context);
         return new WeeklyRouteResponseDto(
                 toApiStop(context.office()),
@@ -53,6 +61,26 @@ public class RouteService {
                 context.driverAssignments(),
                 cacheStats()
         );
+    }
+
+    private void touchPostalCodes(String userEmail, List<String> requiredCodes, List<String> optionalCodes) {
+        if (userEmail == null || userEmail.isBlank()) return;
+        for (String code : requiredCodes) {
+            if (code != null && !code.isBlank()) {
+                try {
+                    savedPostalCodeService.touchLastUsedForUser(userEmail, code);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        for (String code : optionalCodes) {
+            if (code != null && !code.isBlank()) {
+                try {
+                    savedPostalCodeService.touchLastUsedForUser(userEmail, code);
+                } catch (Exception ignored) {
+                }
+            }
+        }
     }
 
     private SingleRouteContext validateAndResolveSingleRoute(RouteRequestDto request) {
