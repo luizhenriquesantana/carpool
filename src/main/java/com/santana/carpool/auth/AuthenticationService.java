@@ -37,7 +37,7 @@ public class AuthenticationService {
         String passwordHash = passwordEncoder.encode(request.password());
         LocalDateTime now = LocalDateTime.now(LHR_ZONE);
         String region = extractRegionFromRequest(httpRequest);
-        User user = new User(null, username, passwordHash, "local", null, region, now, now, null);
+        User user = new User(null, username, username, passwordHash, "local", null, region, now, now, null);
         userRepository.save(user);
         return new AuthResponse(tokenProvider.generateToken(username));
     }
@@ -53,7 +53,7 @@ public class AuthenticationService {
 
         LocalDateTime now = LocalDateTime.now(LHR_ZONE);
         String region = extractRegionFromRequest(httpRequest);
-        User updatedUser = new User(user.id(), user.username(), user.passwordHash(), user.provider(),
+        User updatedUser = new User(user.id(), user.username(), user.username(), user.passwordHash(), user.provider(),
                 user.providerId(), region != null ? region : user.userRegion(), user.createDate(), now, now);
         userRepository.save(updatedUser);
 

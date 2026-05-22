@@ -44,19 +44,29 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             logger.info("Determined provider: {}", provider);
 
             String providerId = extractProviderId(attributes, provider);
+            String rawEmail = extractEmail(attributes, provider);
+            
+            if (rawEmail == null || rawEmail.isBlank()) {
+                logger.error("Email not found in OAuth2 attributes for provider: {}", provider);
+                logger.error("Available attributes: {}", attributes.keySet());
+                throw new IllegalArgumentException("Email is required but not provided by OAuth2 provider: " + provider);
+            }
+            
+            String email = rawEmail.toLowerCase();
             String username = extractUsername(attributes, provider).toLowerCase();
 
-            logger.info("Creating/updating user: provider={}, providerId={}, username={}", provider, providerId, username);
+            logger.info("Creating/updating user: provider={}, providerId={}, email={}, username={}", provider, providerId, email, username);
 
-            User user = userRepository.findByProviderAndProviderId(provider, providerId)
+            User user = userRepository.findByEmail(email)
                     .map(existingUser -> {
-                        // Update last login and ensure username is lowercase
+                        // Update last login and provider info if different
                         User updatedUser = new User(
                                 existingUser.id(),
+                                existingUser.email(),
                                 username,
                                 existingUser.passwordHash(),
-                                existingUser.provider(),
-                                existingUser.providerId(),
+                                provider,
+                                providerId,
                                 existingUser.userRegion(),
                                 existingUser.createDate(),
                                 LocalDateTime.now(),
@@ -68,6 +78,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                         // Create new user
                         User newUser = new User(
                                 null,
+                                email,
                                 username,
                                 null,
                                 provider,
@@ -80,10 +91,10 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                         return userRepository.save(newUser);
                     });
 
-            logger.info("User created/updated successfully: {}", user.username());
+            logger.info("User created/updated successfully: {}", user.email());
 
             // Generate JWT token for the user
-            String token = tokenProvider.generateToken(user.username());
+            String token = tokenProvider.generateToken(user.email());
             logger.info("JWT token generated successfully");
 
             // Redirect to frontend oauth-callback with token
@@ -125,6 +136,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         return switch (provider) {
             case "google" -> (String) attributes.get("name");
             case "github" -> (String) attributes.get("login");
+            default -> throw new IllegalArgumentException("Unsupported provider: " + provider);
+        };
+    }
+
+    private String extractEmail(Map<String, Object> attributes, String provider) {
+        return switch (provider) {
+            case "google" -> (String) attributes.get("email");
+            case "github" -> (String) attributes.get("email");
             default -> throw new IllegalArgumentException("Unsupported provider: " + provider);
         };
     }

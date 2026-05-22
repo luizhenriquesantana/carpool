@@ -36,8 +36,14 @@ public class AuthController {
 
     @PostMapping("/logout")
     public Map<String, String> logout(HttpServletRequest request) {
+        // Clear security context
         SecurityContextHolder.clearContext();
-        request.getSession().invalidate();
+        
+        // Invalidate session completely to prevent OAuth2 state interference
+        if (request.getSession(false) != null) {
+            request.getSession().invalidate();
+        }
+        
         return Map.of("message", "Logged out successfully");
     }
 

@@ -14,15 +14,15 @@ public class SavedPostalCodeService {
         this.userRepository = userRepository;
     }
 
-    public List<SavedPostalCode> listForUser(String username) {
-        String userId = userRepository.findByUsername(username)
+    public List<SavedPostalCode> listForUser(String email) {
+        String userId = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."))
                 .id();
         return savedPostalCodeRepository.findByUserId(userId);
     }
 
-    public SavedPostalCode saveForUser(String username, SavedPostalCodeRequest request) {
-        String userId = userRepository.findByUsername(username)
+    public SavedPostalCode saveForUser(String email, SavedPostalCodeRequest request) {
+        String userId = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."))
                 .id();
         SavedPostalCode savedPostalCode = new SavedPostalCode(
@@ -35,8 +35,8 @@ public class SavedPostalCodeService {
         return savedPostalCodeRepository.save(savedPostalCode);
     }
 
-    public void deleteForUser(String username, String id) {
-        String userId = userRepository.findByUsername(username)
+    public void deleteForUser(String email, String id) {
+        String userId = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."))
                 .id();
         SavedPostalCode postalCode = savedPostalCodeRepository.findById(id)

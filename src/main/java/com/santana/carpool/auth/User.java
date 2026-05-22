@@ -11,6 +11,7 @@ public record User(
         @Id
         String id,
         @Indexed(unique = true)
+        String email,
         String username,
         String passwordHash,
         String provider,
@@ -21,8 +22,8 @@ public record User(
         LocalDateTime lastLogin
 ) {
     public User {
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("Username is required.");
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required.");
         }
         if (provider == null || provider.isBlank()) {
             provider = "local";
