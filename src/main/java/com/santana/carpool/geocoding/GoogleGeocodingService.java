@@ -107,6 +107,10 @@ public class GoogleGeocodingService {
     }
 
     public GeoPoint geocodePostalCode(String postalCode, String countryCode) {
+        return geocodePostalCode(postalCode, countryCode, null, null);
+    }
+
+    public GeoPoint geocodePostalCode(String postalCode, String countryCode, String street, String houseNumber) {
         if (postalCode == null || postalCode.isBlank()) {
             throw new IllegalArgumentException("Postal code is required.");
         }
@@ -115,15 +119,17 @@ public class GoogleGeocodingService {
         }
 
         String normalizedCountry = countryCode.toUpperCase(Locale.ROOT);
-        String cacheKey = normalizePostalCode(postalCode) + "|" + normalizedCountry;
+        String normalizedPostalCode = normalizePostalCode(postalCode);
+        String cacheKey = buildCacheKey(normalizedPostalCode, normalizedCountry, street, houseNumber);
         GeoPoint cached = geocodeCache.get(cacheKey);
         if (cached != null) {
-            log.debug("Geocode cache hit for postalCode={}", cacheKey);
+            log.debug("Geocode cache hit for address={}", cacheKey);
             return cached;
         }
-        log.debug("Geocode cache miss for postalCode={}, calling API", cacheKey);
+        log.debug("Geocode cache miss for address={}, calling API", cacheKey);
 
-        String encodedAddress = URLEncoder.encode(postalCode, StandardCharsets.UTF_8);
+        String addressQuery = buildAddressQuery(normalizedPostalCode, street, houseNumber);
+        String encodedAddress = URLEncoder.encode(addressQuery, StandardCharsets.UTF_8);
         String requestUrl = geocodingBaseUrl
                 + "?address=" + encodedAddress
                 + "&components=country:" + normalizedCountry
@@ -147,16 +153,16 @@ public class GoogleGeocodingService {
             if (!"OK".equals(status)) {
                 String errorMessage = extractErrorMessage(root);
                 if (errorMessage == null) {
-                    throw new IllegalStateException("Geocoding API returned status " + status + " for postal code " + postalCode + " in " + normalizedCountry);
+                    throw new IllegalStateException("Geocoding API returned status " + status + " for address " + addressQuery + " in " + normalizedCountry);
                 }
                 throw new IllegalStateException(
-                        "Geocoding API returned status " + status + " for postal code " + postalCode + " in " + normalizedCountry + ": " + errorMessage
+                        "Geocoding API returned status " + status + " for address " + addressQuery + " in " + normalizedCountry + ": " + errorMessage
                 );
             }
 
             GeoPoint resolved = extractLocation(root);
             geocodeCache.put(cacheKey, resolved);
-            log.debug("Geocoded postalCode={} -> ({}, {})", cacheKey, resolved.latitude(), resolved.longitude());
+            log.debug("Geocoded address={} -> ({}, {})", cacheKey, resolved.latitude(), resolved.longitude());
             return resolved;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -166,6 +172,32 @@ public class GoogleGeocodingService {
             log.error("Geocoding I/O failure for postalCode={} in {}", postalCode, normalizedCountry, ex);
             throw new IllegalStateException("Failed to geocode postal code " + postalCode + " in " + normalizedCountry, ex);
         }
+    }
+
+    private String buildAddressQuery(String postalCode, String street, String houseNumber) {
+        StringBuilder query = new StringBuilder();
+        if (street != null && !street.isBlank()) {
+            query.append(street.trim());
+            if (houseNumber != null && !houseNumber.isBlank()) {
+                query.append(" ").append(houseNumber.trim());
+            }
+            query.append(", ");
+        }
+        query.append(postalCode);
+        return query.toString();
+    }
+
+    private String buildCacheKey(String postalCode, String countryCode, String street, String houseNumber) {
+        if (street == null || street.isBlank()) {
+            return postalCode + "|" + countryCode;
+        }
+        StringBuilder key = new StringBuilder();
+        key.append(street.trim().toUpperCase(Locale.ROOT));
+        if (houseNumber != null && !houseNumber.isBlank()) {
+            key.append("|").append(houseNumber.trim().toUpperCase(Locale.ROOT));
+        }
+        key.append("|").append(postalCode).append("|").append(countryCode);
+        return key.toString();
     }
 
     private String extractStatus(JsonNode root) {

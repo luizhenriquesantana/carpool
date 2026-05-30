@@ -77,10 +77,14 @@ class RouteControllerUnitTest {
                 "IE",
                 "Dunnes Stores Athlone",
                 "N37 A1B2",
+                null,
+                null,
                 "Athlone Business Campus",
                 "N37 XR90",
+                null,
+                null,
                 "MORNING_TO_OFFICE",
-                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"), new ColleagueRequest("B&Q Athlone", "N37 E5F6"))
+                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4", null, null), new ColleagueRequest("B&Q Athlone", "N37 E5F6", null, null))
         );
 
         RouteResponseDto response = controller.route(request, null);
@@ -109,10 +113,14 @@ class RouteControllerUnitTest {
                 "IE",
                 "Dunnes Stores Athlone",
                 "N37 A1B2",
+                null,
+                null,
                 "Athlone Business Campus",
                 "N37 XR90",
+                null,
+                null,
                 "EVENING_TO_HOME",
-                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
+                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4", null, null))
         );
 
         RouteResponseDto response = controller.route(request, null);
@@ -130,10 +138,14 @@ class RouteControllerUnitTest {
                 "IE",
                 "Dunnes Stores Athlone",
                 "N37 A1B2",
+                null,
+                null,
                 "Athlone Business Campus",
                 "N37 XR90",
+                null,
+                null,
                 "INVALID",
-                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
+                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4", null, null))
         );
 
         assertThatThrownBy(() -> controller.route(request, null))
@@ -157,9 +169,11 @@ class RouteControllerUnitTest {
                 "IE",
                 "Athlone Business Campus",
                 "N37 XR90",
+                null,
+                null,
                 List.of(
-                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true),
-                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", false)
+                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true, null, null),
+                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", false, null, null)
                 ),
                 null
         );
@@ -186,9 +200,11 @@ class RouteControllerUnitTest {
                 "IE",
                 "Office",
                 "N37 XR90",
+                null,
+                null,
                 List.of(
-                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true),
-                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", true)
+                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true, null, null),
+                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", true, null, null)
                 ),
                 List.of(
                         new DayRequest("Monday", "SuperValu Golden Island", "MORNING_TO_OFFICE"),
@@ -205,7 +221,7 @@ class RouteControllerUnitTest {
     @Test
     @DisplayName("Should reject weekly request with no members")
     void testWeeklyRouteNoMembers() {
-        WeeklyRouteRequestDto request = new WeeklyRouteRequestDto("IE", "Office", "N37 XR90", List.of(), List.of());
+        WeeklyRouteRequestDto request = new WeeklyRouteRequestDto("IE", "Office", "N37 XR90", null, null, List.of(), List.of());
 
         assertThatThrownBy(() -> controller.weeklyRoute(request, null))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -219,10 +235,14 @@ class RouteControllerUnitTest {
                 "IE",
                 " ",
                 "N37 XR90",
+                null,
+                null,
                 "Office",
                 "N37 XR90",
+                null,
+                null,
                 "MORNING_TO_OFFICE",
-                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
+                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4", null, null))
         );
 
         assertThatThrownBy(() -> controller.route(request, null))
@@ -237,8 +257,12 @@ class RouteControllerUnitTest {
                 "IE",
                 "Dunnes Stores Athlone",
                 "N37 XR90",
+                null,
+                null,
                 "Office",
                 "N37 XR90",
+                null,
+                null,
                 "MORNING_TO_OFFICE",
                 List.of()
         );
@@ -263,10 +287,14 @@ class RouteControllerUnitTest {
                 "IE",
                 "Dunnes Stores Athlone",
                 "N37 XR90",
+                null,
+                null,
                 "Office",
                 "N37 XR90",
                 null,
-                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4"))
+                null,
+                null,
+                List.of(new ColleagueRequest("SuperValu Golden Island", "N37 C3D4", null, null))
         );
 
         RouteResponseDto response = controller.route(request, null);
@@ -282,9 +310,11 @@ class RouteControllerUnitTest {
                 "IE",
                 "Office",
                 "N37 XR90",
+                null,
+                null,
                 List.of(
-                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", false),
-                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", false)
+                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", false, null, null),
+                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", false, null, null)
                 ),
                 List.of(new DayRequest("Monday", null, "MORNING_TO_OFFICE"))
         );
@@ -303,9 +333,11 @@ class RouteControllerUnitTest {
                 "IE",
                 "Office",
                 "N37 XR90",
+                null,
+                null,
                 List.of(
-                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true),
-                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", true)
+                        new MemberRequest("Dunnes Stores Athlone", "N37 G7H8", true, null, null),
+                        new MemberRequest("SuperValu Golden Island", "N37 C3D4", true, null, null)
                 ),
                 List.of(new DayRequest("Monday", "NonExisting", "MORNING_TO_OFFICE"))
         );

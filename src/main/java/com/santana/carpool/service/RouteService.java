@@ -96,15 +96,15 @@ public class RouteService {
 
         TripType tripType = parseTripType(request.tripType());
 
-        Stop driver = geocodeStop("driver", request.driverName(), StopType.DRIVER_START, request.driverPostalCode(), request.country());
-        Stop office = geocodeStop("office", request.officeName(), StopType.OFFICE, request.officePostalCode(), request.country());
+        Stop driver = geocodeStop("driver", request.driverName(), StopType.DRIVER_START, request.driverPostalCode(), request.driverStreet(), request.driverHouseNumber(), request.country());
+        Stop office = geocodeStop("office", request.officeName(), StopType.OFFICE, request.officePostalCode(), request.officeStreet(), request.officeHouseNumber(), request.country());
 
         List<Stop> pickups = new ArrayList<>();
         int index = 1;
         for (ColleagueRequest colleague : request.colleagues()) {
             requireNotBlank(colleague.name(), "colleagues.name");
             requireNotBlank(colleague.postalCode(), "colleagues.postalCode");
-            pickups.add(geocodeStop("p" + index, colleague.name(), StopType.PICKUP, colleague.postalCode(), request.country()));
+            pickups.add(geocodeStop("p" + index, colleague.name(), StopType.PICKUP, colleague.postalCode(), colleague.street(), colleague.houseNumber(), request.country()));
             index++;
         }
 
@@ -144,13 +144,13 @@ public class RouteService {
             throw new IllegalArgumentException("At least one member is required.");
         }
 
-        Stop office = geocodeStop("office", request.officeName(), StopType.OFFICE, request.officePostalCode(), request.country());
+        Stop office = geocodeStop("office", request.officeName(), StopType.OFFICE, request.officePostalCode(), request.officeStreet(), request.officeHouseNumber(), request.country());
 
         List<MemberInfo> members = request.members().stream().map(m -> {
             requireNotBlank(m.name(), "members.name");
             requireNotBlank(m.postalCode(), "members.postalCode");
             boolean canDrive = m.canDrive() == null || m.canDrive();
-            Stop stop = geocodeStop("m-" + sanitizeIdPart(m.name()), m.name(), StopType.PICKUP, m.postalCode(), request.country());
+            Stop stop = geocodeStop("m-" + sanitizeIdPart(m.name()), m.name(), StopType.PICKUP, m.postalCode(), m.street(), m.houseNumber(), request.country());
             return new MemberInfo(m.name(), canDrive, stop);
         }).toList();
 
@@ -238,6 +238,10 @@ public class RouteService {
 
     private Stop geocodeStop(String id, String label, StopType type, String postalCode, String countryCode) {
         return new Stop(id, label, type, postalCode, geocodingService.geocodePostalCode(postalCode, countryCode));
+    }
+
+    private Stop geocodeStop(String id, String label, StopType type, String postalCode, String street, String houseNumber, String countryCode) {
+        return new Stop(id, label, type, postalCode, geocodingService.geocodePostalCode(postalCode, countryCode, street, houseNumber));
     }
 
     private long toMinutes(long seconds) {
